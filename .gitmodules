@@ -1,0 +1,3 @@
+[submodule "openfpga"]
+	path = openfpga
+	url = https://github.com/lnis-uofu/OpenFPGA.git

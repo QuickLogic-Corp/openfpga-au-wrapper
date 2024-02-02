@@ -1,0 +1,294 @@
+name: 'build-win'
+
+on:
+  push:
+
+jobs:
+  
+  build-msys2:
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - msystem: mingw64
+            env: x86_64
+            runner: windows-2022
+          - msystem: ucrt64
+            env: ucrt-x86_64
+            runner: windows-2022
+          # clang version 17.0.6
+          # Target: x86_64-w64-windows-gnu
+          # Thread model: posix
+          # D:/a/OpenFPGA/OpenFPGA/vtr-verilog-to-routing/libs/librrgraph/src/base/rr_graph_storage.cpp:425:10: note: in instantiation of function template specialization 'std::sort<edge_sort_iterator, edge_compare_dest_node>' requested here std::sort(
+          # C:/msys64/clang64/include/c++/v1/__algorithm/sort.h:647:5: error: indirection requires pointer operand ('const edge_sort_iterator' invalid)*__begin = _Ops::__iter_move(__pivot_pos);
+          # - msystem: clang64
+          #   env: clang-x86_64
+          #   runner: windows-2022
+
+    runs-on: ${{ matrix.runner }}
+
+    defaults:
+      run:
+        shell: msys2 {0}
+        #shell: C:\msys64\msys2_shell.cmd -mingw64 -defterm -here -no-start {0}
+
+    steps:
+
+    - name: Cancel Previous
+      uses: styfle/cancel-workflow-action@0.12.1
+      with:
+        access_token: ${{ github.token }}
+
+    - name: Checkout Repo
+      uses: actions/checkout@v4.1.1
+      with:
+        submodules: recursive
+        fetch-depth: 1
+
+    - name: Setup MSYS2
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: ${{ matrix.msystem }}
+        path-type: minimal
+        update: true
+        release: false
+        install: >-
+          base-devel
+          git
+          wget
+          mingw-w64-${{ matrix.env }}-toolchain
+          mingw-w64-${{ matrix.env }}-cmake
+          mingw-w64-${{ matrix.env }}-tcl
+          mingw-w64-${{ matrix.env }}-zlib
+          mingw-w64-${{ matrix.env }}-swig
+          mingw-w64-${{ matrix.env }}-python
+
+    - name: Show Shell Configuration
+      run: |
+        which git && git --version || true
+        which cmake && cmake --version || true
+        which make && make --version || true
+        which python && python --version || true
+        which ninja && ninja --version || true
+        which tclsh && echo 'puts [info patchlevel];exit 0' | tclsh || true
+
+    - name: Print Compiler Info
+      run: |
+        printf "\n"
+        printf "$(which gcc)\n"
+        printf "$(gcc -v)\n"
+        printf "\n"
+        printf "$(which g++)\n"
+        printf "$(g++ -v)\n"
+        printf "\n"
+        printf "$(which ld)\n"
+        printf "$(ld -v)\n"
+
+    - name: Dump GitHub Context
+      env:
+        GITHUB_CONTEXT: ${{ toJson(github) }}
+      run: echo "$GITHUB_CONTEXT"
+
+    - name: Print Repo HEAD
+      run: |
+        echo && echo "git last log" && git log -1
+
+    # https://sourceforge.net/p/mingw/mailman/message/5690922/
+    # https://github.com/capnproto/capnproto/issues/1458
+    - name: Build
+      run: |
+        #
+        export SOURCE_DIR=${PWD}/openfpga
+        echo "SOURCE_DIR=${SOURCE_DIR}" >> $GITHUB_ENV
+        #
+        export COMMIT_SHA1=$(git -c ${SOURCE_DIR} rev-parse --short HEAD)
+        echo "COMMIT_SHA1=${COMMIT_SHA1}" >> $GITHUB_ENV
+        printf "COMMIT_SHA1=${COMMIT_SHA1}"
+        #
+        export BUILD_DIR=${SOURCE_DIR}/build
+        echo "BUILD_DIR=${BUILD_DIR}" >> $GITHUB_ENV
+        #
+        export INSTALL_DIR=${SOURCE_DIR}/install
+        echo "INSTALL_DIR=${INSTALL_DIR}" >> $GITHUB_ENV
+        #
+        mkdir -p ${SOURCE_DIR}/build
+        #
+        printf "\n\n >>> hotfixes <<<\n"
+        find ${SOURCE_DIR}/vtr-verilog-to-routing/libs/libvtrutil/src/vtr_util.cpp -type f -exec sed -i 's-getdelim(-0;//-g' {} \;
+        find ${SOURCE_DIR}/vtr-verilog-to-routing/libs/EXTERNAL/capnproto/c++/src/kj/test-helpers.c++ -type f -exec sed -i 's-needle.size()};-needle.end()};-g' {} \;
+        find ${SOURCE_DIR}/vtr-verilog-to-routing/libs/EXTERNAL/capnproto/c++/ekam-provider/canonical/kj/test-helpers.c++ -type f -exec sed -i 's-needle.size()};-needle.end()};-g' {} \;
+        find ${SOURCE_DIR}/vtr-verilog-to-routing/libs/EXTERNAL/capnproto/c++/ekam-provider/c++header/kj/test-helpers.c++ -type f -exec sed -i 's-needle.size()};-needle.end()};-g' {} \;
+        export SOURCE_DIR_PATH_W=$(cygpath -w "${SOURCE_DIR}" | sed 's;\\;/;g')
+        echo "${SOURCE_DIR_PATH_W}"
+        export MSYS2_ARG_CONV_EXCL="../EXTERNAL/capnproto/c++/src/capnp/capnp.exe;${SOURCE_DIR_PATH_W}/build/vtr-verilog-to-routing/libs/EXTERNAL/capnproto/c++/src/capnp/capnpc-c++.exe:."
+        echo "${MSYS2_ARG_CONV_EXCL}"
+        #
+        printf "\n\n >>> cmake configure <<<\n"
+        cmake -G "MSYS Makefiles" -DCMAKE_INSTALL_PREFIX=${INSTALL_DIR} -DOPENFPGA_IPO_BUILD=off -DOPENFPGA_WITH_YOSYS=OFF -DOPENFPGA_WITH_YOSYS_PLUGIN=OFF -DOPENFPGA_WITH_TEST=OFF -DOPENFPGA_WITH_VERSION=OFF -DOPENFPGA_WITH_SWIG=OFF -DWITH_ABC=OFF -DVTR_IPO_BUILD=off -DHAVE_STRUCT_TIMESPEC=1 -DABC_USE_STDINT_H=1 -S ${SOURCE_DIR} -B ${BUILD_DIR}
+        #
+        printf "\n\n >>> build and install <<<\n"
+        make install -C ${BUILD_DIR} -j$(nproc)
+
+    - name: Install 7zip
+      run: |
+        printf "\n\n >>>7zip setup <<<\n"
+        export SEVENZIP_DIR_PATH=${SOURCE_DIR}/7zip
+        mkdir -p ${SEVENZIP_DIR_PATH}
+        export SEVENZIP_FILE_PATH=${SEVENZIP_DIR_PATH}/7z.exe
+        echo "SEVENZIP_FILE_PATH=${SEVENZIP_FILE_PATH}" >> $GITHUB_ENV
+        export SEVENZIP_SFX_FILE_PATH_W=$(cygpath -w "${SEVENZIP_DIR_PATH}/7z.sfx" | sed 's/\\/\\\\/g')
+        echo "SEVENZIP_SFX_FILE_PATH_W=${SEVENZIP_SFX_FILE_PATH_W}" >> $GITHUB_ENV
+        wget --quiet https://www.7-zip.org/a/7zr.exe --directory-prefix=${SEVENZIP_DIR_PATH}
+        wget --quiet https://www.7-zip.org/a/7z2201-x64.exe --directory-prefix=${SEVENZIP_DIR_PATH}
+        cd ${SEVENZIP_DIR_PATH}
+        ${SEVENZIP_DIR_PATH}/7zr.exe x ${SEVENZIP_DIR_PATH}/7z2201-x64.exe -y > /dev/null
+        cd - &> /dev/null
+
+    - name: Create Package
+      run: |
+        printf "\n\n >>>create package dir, copy binaries <<<\n"
+        export PACKAGE_DIR=${SOURCE_DIR}/package
+        mkdir -p ${PACKAGE_DIR}/bin
+        cp -fv ${INSTALL_DIR}/bin/vpr.exe ${PACKAGE_DIR}/bin/
+        cp -fv ${INSTALL_DIR}/bin/openfpga.exe ${PACKAGE_DIR}/bin/
+        #
+        printf "\n\n >>> ${{ matrix.msystem }} dependency libs: vpr.exe <<<\n"
+        printf "\nldd output:"
+        ldd ${PACKAGE_DIR}/bin/vpr.exe
+        printf "\ncopy libs:"
+        for f in `ldd ${PACKAGE_DIR}/bin/vpr.exe | cut -d' ' -f 3 | grep "${{ matrix.msystem }}" | uniq`; do cp -fv ${f} ${PACKAGE_DIR}/bin; done
+        printf "\n\n >>> ${{ matrix.msystem }} dependency libs: openfpga.exe <<<\n"
+        printf "\nldd output:"
+        ldd ${PACKAGE_DIR}/bin/openfpga.exe
+        printf "\ncopy libs:"
+        for f in `ldd ${PACKAGE_DIR}/bin/openfpga.exe | cut -d' ' -f 3 | grep "${{ matrix.msystem }}" | uniq`; do cp -fv ${f} ${PACKAGE_DIR}/bin; done
+        #
+        printf "\n\n >>> create packages <<<\n"
+        cd ${PACKAGE_DIR}
+        # ${SEVENZIP_FILE_PATH} a -mmt -mx3 -sfx${SEVENZIP_SFX_FILE_PATH_W} openfpga.sfx.exe * > /dev/null
+        # mv ${PACKAGE_DIR}/openfpga.sfx.exe ${SOURCE_DIR}/openfpga-${{ env.COMMIT_SHA1 }}-${{ matrix.msystem }}.sfx.exe
+        # ls ${SOURCE_DIR}/openfpga-${{ env.COMMIT_SHA1 }}-${{ matrix.msystem }}.sfx.exe
+        ${SEVENZIP_FILE_PATH} a -tzip openfpga.7z * > /dev/null
+        mv ${PACKAGE_DIR}/openfpga.7z ${SOURCE_DIR}/openfpga-${{ env.COMMIT_SHA1 }}-${{ matrix.msystem }}.7z
+        ls ${SOURCE_DIR}/openfpga-${{ env.COMMIT_SHA1 }}-${{ matrix.msystem }}.7z
+        cd - &> /dev/null
+
+    - name: Upload OpenFPGA Package
+      uses: actions/upload-artifact@v4.3.0
+      if: ${{ success() }}
+      with:
+        name: openfpga-build-${{ env.COMMIT_SHA1 }}-${{ matrix.msystem }}
+        retention-days: 2
+        path: ${{ env.SOURCE_DIR }}/openfpga-${{ env.COMMIT_SHA1 }}-${{ matrix.msystem }}.7z
+        overwrite: true
+
+  build-msvc:
+    # if: ${{ false }}  # disable for now, we don't have flex/bison in native windows env.
+    runs-on: windows-2022
+
+    defaults:
+      run:
+        shell: cmd
+
+    steps:
+
+    - name: Cancel previous
+      uses: styfle/cancel-workflow-action@0.12.1
+      with:
+        access_token: ${{ github.token }}
+
+    - name: Setup cmake
+      uses: jwlawson/actions-setup-cmake@v1.13.0
+      with:
+        cmake-version: '3.21.3'
+
+    - name: Use cmake
+      run: cmake --version
+
+    - name: Install Core Dependencies
+      run: |
+        choco install -y make
+        choco install -y winflexbison
+
+    - name: Setup Python
+      uses: actions/setup-python@v4.3.0
+      with:
+        python-version: 3.8
+        architecture: x64
+
+    - name: Install libusb with vcpkg
+      run: |
+        C:\vcpkg\vcpkg.exe install libusb:x64-windows
+        C:\vcpkg\vcpkg.exe integrate install
+
+    - name: Install nasm with choco
+      run: |
+        choco install -y nasm
+        ls "C:\Program Files\NASM"
+
+    - run: git config --global core.autocrlf input
+      shell: bash
+
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+        fetch-depth: 0
+
+    - name: Prebuild
+      run: |
+        export COMMIT_SHA1=$(git rev-parse --short HEAD)
+        echo "COMMIT_SHA1=${COMMIT_SHA1}" >> $GITHUB_ENV
+        printf "COMMIT_SHA1=${COMMIT_SHA1}"
+        #
+        export SOURCE_DIR=${PWD}/openfpga
+        export SOURCE_DIR_W=$(cygpath -w "${SOURCE_DIR}" | sed 's;\\;/;g')
+        echo "SOURCE_DIR_W=${SOURCE_DIR_W}" >> $GITHUB_ENV
+        #
+        export BUILD_DIR=${SOURCE_DIR}/build
+        export BUILD_DIR_W=$(cygpath -w "${BUILD_DIR}" | sed 's;\\;/;g')
+        echo "BUILD_DIR_W=${BUILD_DIR_W}" >> $GITHUB_ENV
+        #
+        export INSTALL_DIR=${SOURCE_DIR}/install
+        export INSTALL_DIR_W=$(cygpath -w "${INSTALL_DIR}" | sed 's;\\;/;g')
+        echo "INSTALL_DIR_W=${INSTALL_DIR_W}" >> $GITHUB_ENV
+        #
+        mkdir -p ${SOURCE_DIR}/build
+        #
+        printf "\n\n >>> hotfixes <<<\n"
+        find ${SOURCE_DIR}/vtr-verilog-to-routing/libs/libvtrutil/src/vtr_util.cpp -type f -exec sed -i 's-getdelim(-0;//-g' {} \;
+        find ${SOURCE_DIR}/vtr-verilog-to-routing/libs/EXTERNAL/capnproto/c++/src/kj/test-helpers.c++ -type f -exec sed -i 's-needle.size()};-needle.end()};-g' {} \;
+        find ${SOURCE_DIR}/vtr-verilog-to-routing/libs/EXTERNAL/capnproto/c++/ekam-provider/canonical/kj/test-helpers.c++ -type f -exec sed -i 's-needle.size()};-needle.end()};-g' {} \;
+        find ${SOURCE_DIR}/vtr-verilog-to-routing/libs/EXTERNAL/capnproto/c++/ekam-provider/c++header/kj/test-helpers.c++ -type f -exec sed -i 's-needle.size()};-needle.end()};-g' {} \;
+      shell: bash
+        
+    - name: Build & Test
+      run: |
+        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+
+        set CMAKE_GENERATOR=Ninja
+        set CC=cl
+        set CXX=cl
+        set NO_TCMALLOC=On
+        set PREFIX=%GITHUB_WORKSPACE%\install
+        set CPU_CORES=%NUMBER_OF_PROCESSORS%
+
+        set MAKE_DIR=C:\make\bin
+        #set TCL_DIR=%PROGRAMFILES%\Git\mingw64\bin
+        set PATH=%pythonLocation%;%MAKE_DIR%;C:\Program Files\NASM;%PATH%
+        #set PATH=%pythonLocation%;%MAKE_DIR%;%TCL_DIR%;%PATH%
+
+        set
+        where cmake && cmake --version
+        where make && make --version
+        where python && python --version
+        where ninja && ninja --version
+
+        #
+        printf "\n\n >>> cmake configure <<<\n"
+        cmake -G "Ninja" -DCMAKE_INSTALL_PREFIX=%INSTALL_DIR_W% -DOPENFPGA_WITH_YOSYS=OFF -DOPENFPGA_WITH_YOSYS_PLUGIN=OFF -DOPENFPGA_WITH_TEST=OFF -DOPENFPGA_WITH_VERSION=OFF -DOPENFPGA_WITH_SWIG=OFF -DWITH_ABC=OFF  -DHAVE_STRUCT_TIMESPEC=1 -DABC_USE_STDINT_H=1 -S %SOURCE_DIR_W% -B %BUILD_DIR_W%
+        #
+        printf "\n\n >>> build and install <<<\n"
+        cmake --build %BUILD_DIR_W% -j%CPU_CORES%
+        cmake --install %BUILD_DIR_W%
+
