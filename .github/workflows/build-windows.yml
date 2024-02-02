@@ -220,9 +220,8 @@ jobs:
 
     - name: Install libusb with vcpkg
       run: |
-        C:\vcpkg\vcpkg.exe install libusb:x64-windows
+        C:\vcpkg\vcpkg.exe install libusb tbb zlib --triplet=x64-windows
         C:\vcpkg\vcpkg.exe integrate install
-        C:\vcpkg\vcpkg.exe install tbb
 
     - name: Install nasm with choco
       run: |
