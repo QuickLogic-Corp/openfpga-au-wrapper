@@ -120,7 +120,7 @@ jobs:
         find ${SOURCE_DIR}/vtr-verilog-to-routing/libs/EXTERNAL/capnproto/c++/ekam-provider/canonical/kj/test-helpers.c++ -type f -exec sed -i 's-needle.size()};-needle.end()};-g' {} \;
         find ${SOURCE_DIR}/vtr-verilog-to-routing/libs/EXTERNAL/capnproto/c++/ekam-provider/c++header/kj/test-helpers.c++ -type f -exec sed -i 's-needle.size()};-needle.end()};-g' {} \;
         find ${SOURCE_DIR}/libs/libnamemanager/src/base/io_name_map.h -type f -exec sed -i '7 i #include <array>' {} \;
-        find ${SOURCE_DIR}/src/fpga_bitstream/fabric_bitstream.h -type f -exec sed -i '33 i #include <cstdint>' {} \;
+        find ${SOURCE_DIR}/openfpga/src/fpga_bitstream/fabric_bitstream.h -type f -exec sed -i '33 i #include <cstdint>' {} \;
         export SOURCE_DIR_PATH_W=$(cygpath -w "${SOURCE_DIR}" | sed 's;\\;/;g')
         echo "${SOURCE_DIR_PATH_W}"
         export MSYS2_ARG_CONV_EXCL="../EXTERNAL/capnproto/c++/src/capnp/capnp.exe;${SOURCE_DIR_PATH_W}/build/vtr-verilog-to-routing/libs/EXTERNAL/capnproto/c++/src/capnp/capnpc-c++.exe:."
@@ -264,7 +264,7 @@ jobs:
         find ${SOURCE_DIR}/vtr-verilog-to-routing/libs/EXTERNAL/capnproto/c++/ekam-provider/canonical/kj/test-helpers.c++ -type f -exec sed -i 's-needle.size()};-needle.end()};-g' {} \;
         find ${SOURCE_DIR}/vtr-verilog-to-routing/libs/EXTERNAL/capnproto/c++/ekam-provider/c++header/kj/test-helpers.c++ -type f -exec sed -i 's-needle.size()};-needle.end()};-g' {} \;
         find ${SOURCE_DIR}/libs/libnamemanager/src/base/io_name_map.h -type f -exec sed -i '7 i #include <array>' {} \;
-        find ${SOURCE_DIR}/src/fpga_bitstream/fabric_bitstream.h -type f -exec sed -i '33 i #include <cstdint>' {} \;
+        find ${SOURCE_DIR}/openfpga/src/fpga_bitstream/fabric_bitstream.h -type f -exec sed -i '33 i #include <cstdint>' {} \;
       shell: bash
         
     - name: Build & Test
