@@ -224,8 +224,8 @@ jobs:
         echo %CD%
         set TBB_INSTALL_DIR=%CD%
         set TBB_ROOT_DIR=%CD%
-        echo "TBB_INSTALL_DIR=%TBB_INSTALL_DIR%" >> $env:GITHUB_ENV
-        echo "TBB_ROOT_DIR=%TBB_ROOT_DIR%" >> $env:GITHUB_ENV
+        "TBB_INSTALL_DIR=%TBB_INSTALL_DIR%" >> $env:GITHUB_ENV
+        "TBB_ROOT_DIR=%TBB_ROOT_DIR%" >> $env:GITHUB_ENV
         cd -
 
     - name: Setup Python
