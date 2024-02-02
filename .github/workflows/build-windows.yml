@@ -102,7 +102,7 @@ jobs:
         export SOURCE_DIR=${PWD}/openfpga
         echo "SOURCE_DIR=${SOURCE_DIR}" >> $GITHUB_ENV
         #
-        export COMMIT_SHA1=$(git -c ${SOURCE_DIR} rev-parse --short HEAD)
+        export COMMIT_SHA1=$(git -C ${SOURCE_DIR} rev-parse --short HEAD)
         echo "COMMIT_SHA1=${COMMIT_SHA1}" >> $GITHUB_ENV
         printf "COMMIT_SHA1=${COMMIT_SHA1}"
         #
@@ -240,13 +240,14 @@ jobs:
 
     - name: Prebuild
       run: |
-        export COMMIT_SHA1=$(git rev-parse --short HEAD)
-        echo "COMMIT_SHA1=${COMMIT_SHA1}" >> $GITHUB_ENV
-        printf "COMMIT_SHA1=${COMMIT_SHA1}"
         #
         export SOURCE_DIR=${PWD}/openfpga
         export SOURCE_DIR_W=$(cygpath -w "${SOURCE_DIR}" | sed 's;\\;/;g')
         echo "SOURCE_DIR_W=${SOURCE_DIR_W}" >> $GITHUB_ENV
+        #
+        export COMMIT_SHA1=$(git -C ${SOURCE_DIR} rev-parse --short HEAD)
+        echo "COMMIT_SHA1=${COMMIT_SHA1}" >> $GITHUB_ENV
+        printf "COMMIT_SHA1=${COMMIT_SHA1}"
         #
         export BUILD_DIR=${SOURCE_DIR}/build
         export BUILD_DIR_W=$(cygpath -w "${BUILD_DIR}" | sed 's;\\;/;g')
