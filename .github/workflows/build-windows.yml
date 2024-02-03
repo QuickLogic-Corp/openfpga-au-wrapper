@@ -211,7 +211,7 @@ jobs:
     - name: Install Core Dependencies
       run: |
         choco install -y make
-        choco install -y winflexbison
+        choco install -y winflexbison3
         choco install -y wget
         wget --quiet https://github.com/oneapi-src/oneTBB/releases/download/v2020.3/tbb-2020.3-win.zip --directory-prefix=%CD%
         unzip tbb-2020.3-win.zip
