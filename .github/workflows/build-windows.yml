@@ -210,9 +210,7 @@ jobs:
 
     - name: Install Core Dependencies
       run: |
-        choco install -y make
-        choco install -y winflexbison3
-        choco install -y wget
+        choco install -y make winflexbison3 wget
         wget --quiet https://github.com/oneapi-src/oneTBB/releases/download/v2020.3/tbb-2020.3-win.zip --directory-prefix=%CD%
         unzip tbb-2020.3-win.zip
 
@@ -243,9 +241,10 @@ jobs:
         python-version: 3.8
         architecture: x64
 
-    - name: Install libusb with vcpkg
+    # C:\vcpkg\vcpkg.exe install libusb readline eigen3 zlib gtk3 libx11 --triplet=x64-windows
+    - name: Install Dependencies with vcpkg
       run: |
-        C:\vcpkg\vcpkg.exe install libusb readline eigen3 zlib gtk3 libx11 --triplet=x64-windows
+        C:\vcpkg\vcpkg.exe install readline eigen3 zlib --triplet=x64-windows
         C:\vcpkg\vcpkg.exe integrate install
 
     - name: Install nasm with choco
@@ -289,6 +288,8 @@ jobs:
         find ${SOURCE_DIR}/vtr-verilog-to-routing/libs/EXTERNAL/capnproto/c++/ekam-provider/c++header/kj/test-helpers.c++ -type f -exec sed -i 's-needle.size()};-needle.end()};-g' {} \;
         find ${SOURCE_DIR}/libs/libnamemanager/src/base/io_name_map.h -type f -exec sed -i '7 i #include <array>' {} \;
         find ${SOURCE_DIR}/openfpga/src/fpga_bitstream/fabric_bitstream.h -type f -exec sed -i '33 i #include <cstdint>' {} \;
+        find ${SOURCE_DIR}/openfpga/vtr-verilog-to-routing/CMakeLists.txt -type f -exec sed -i '141 i if(NOT MSVC)' {} \;
+        find ${SOURCE_DIR}/openfpga/vtr-verilog-to-routing/CMakeLists.txt -type f -exec sed -i '144 i endif()' {} \;
       shell: bash
         
     - name: Build & Test
@@ -303,9 +304,7 @@ jobs:
         set CPU_CORES=%NUMBER_OF_PROCESSORS%
 
         set MAKE_DIR=C:\make\bin
-        #set TCL_DIR=%PROGRAMFILES%\Git\mingw64\bin
         set PATH=%pythonLocation%;%MAKE_DIR%;C:\Program Files\NASM;%PATH%
-        #set PATH=%pythonLocation%;%MAKE_DIR%;%TCL_DIR%;%PATH%
 
         set
         where cmake && cmake --version
@@ -313,10 +312,9 @@ jobs:
         where python && python --version
         where ninja && ninja --version
 
-        #
         printf "\n\n >>> cmake configure <<<\n"
-        cmake -G "Ninja" -DCMAKE_INSTALL_PREFIX=%INSTALL_DIR_W% -DOPENFPGA_WITH_YOSYS=OFF -DOPENFPGA_WITH_YOSYS_PLUGIN=OFF -DOPENFPGA_WITH_TEST=OFF -DOPENFPGA_WITH_VERSION=OFF -DOPENFPGA_WITH_SWIG=OFF -DWITH_ABC=OFF  -DHAVE_STRUCT_TIMESPEC=1 -DABC_USE_STDINT_H=1 -DCMAKE_TOOLCHAIN_FILE="%VCPKG_INSTALLATION_ROOT%\\scripts\\buildsystems\\vcpkg.cmake" -S %SOURCE_DIR_W% -B %BUILD_DIR_W%
-        #
+        cmake -G "Ninja" -DCMAKE_INSTALL_PREFIX=%INSTALL_DIR_W% -DOPENFPGA_IPO_BUILD=off -DOPENFPGA_WITH_YOSYS=OFF -DOPENFPGA_WITH_YOSYS_PLUGIN=OFF -DOPENFPGA_WITH_TEST=OFF -DOPENFPGA_WITH_VERSION=OFF -DOPENFPGA_WITH_SWIG=OFF -DWITH_ABC=OFF  -DHAVE_STRUCT_TIMESPEC=1 -DABC_USE_STDINT_H=1 -DVPR_USE_EZGL=off -DCMAKE_TOOLCHAIN_FILE="%VCPKG_INSTALLATION_ROOT%\\scripts\\buildsystems\\vcpkg.cmake" -S %SOURCE_DIR_W% -B %BUILD_DIR_W%
+
         printf "\n\n >>> build and install <<<\n"
         cmake --build %BUILD_DIR_W% -j%CPU_CORES%
         cmake --install %BUILD_DIR_W%
