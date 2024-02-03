@@ -226,7 +226,15 @@ jobs:
         $env:TBB_ROOT_DIR=Get-Location
         "TBB_INSTALL_DIR=$env:TBB_INSTALL_DIR" >> $env:GITHUB_ENV
         "TBB_ROOT_DIR=$env:TBB_ROOT_DIR" >> $env:GITHUB_ENV
+        Write-Host $env:TBB_INSTALL_DIR
+        Write-Host $env:TBB_ROOT_DIR
         cd -
+      shell: pwsh
+
+    - name: Debug TBB
+      run: |
+        Write-Host $env:TBB_INSTALL_DIR
+        Write-Host $env:TBB_ROOT_DIR
       shell: pwsh
 
     - name: Setup Python
