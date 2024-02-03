@@ -227,6 +227,7 @@ jobs:
         "TBB_INSTALL_DIR=%TBB_INSTALL_DIR%" >> $env:GITHUB_ENV
         "TBB_ROOT_DIR=%TBB_ROOT_DIR%" >> $env:GITHUB_ENV
         cd -
+      shell: pwsh
 
     - name: Setup Python
       uses: actions/setup-python@v4.3.0
