@@ -290,6 +290,9 @@ jobs:
         find ${SOURCE_DIR}/openfpga/src/fpga_bitstream/fabric_bitstream.h -type f -exec sed -i '33 i #include <cstdint>' {} \;
         find ${SOURCE_DIR}/vtr-verilog-to-routing/CMakeLists.txt -type f -exec sed -i '141 i if(NOT MSVC)' {} \;
         find ${SOURCE_DIR}/vtr-verilog-to-routing/CMakeLists.txt -type f -exec sed -i '144 i endif()' {} \;
+        find ${SOURCE_DIR}/vtr-verilog-to-routing/libs/EXTERNAL/capnproto/c++/src/kj/test-helpers.c++ -type f -exec sed -i '38 i #include <algorithm>' {} \;
+        find ${SOURCE_DIR}/vtr-verilog-to-routing/libs/EXTERNAL/capnproto/c++/ekam-provider/canonical/kj/test-helpers.c++ -type f -exec sed -i '38 i #include <algorithm>' {} \;
+        find ${SOURCE_DIR}/vtr-verilog-to-routing/libs/EXTERNAL/capnproto/c++/ekam-provider/c++header/kj/test-helpers.c++ -type f -exec sed -i '38 i #include <algorithm>' {} \;
       shell: bash
         
     - name: Build & Test
