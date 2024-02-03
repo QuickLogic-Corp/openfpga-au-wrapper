@@ -219,13 +219,13 @@ jobs:
     - name: Setup TBB
       run: |
         dir
-        echo %CD%
+        echo $pwd
         cd tbb
-        echo %CD%
-        set TBB_INSTALL_DIR=%CD%
-        set TBB_ROOT_DIR=%CD%
-        "TBB_INSTALL_DIR=%TBB_INSTALL_DIR%" >> $env:GITHUB_ENV
-        "TBB_ROOT_DIR=%TBB_ROOT_DIR%" >> $env:GITHUB_ENV
+        echo $pwd
+        $env:TBB_INSTALL_DIR=$pwd
+        $env:TBB_ROOT_DIR=$pwd
+        "TBB_INSTALL_DIR=$env:TBB_INSTALL_DIR" >> $env:GITHUB_ENV
+        "TBB_ROOT_DIR=$env:TBB_ROOT_DIR" >> $env:GITHUB_ENV
         cd -
       shell: pwsh
 
