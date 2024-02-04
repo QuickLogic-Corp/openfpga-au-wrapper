@@ -43,12 +43,19 @@ SHELL := /bin/bash
 # PREFIX for 'install' path
 PREFIX ?= $(MAKEFILE_DIR_PATH)/install
 
+# 'package' path
+PACKAGE_DIR := $(MAKEFILE_DIR_PATH)/package
+
 # CMake
 BUILD_DIR := $(MAKEFILE_DIR_PATH)/openfpga/build
 SOURCE_DIR := $(MAKEFILE_DIR_PATH)/openfpga
 
+# Version
+COMMIT_SHA1 := $(shell git -C $(SOURCE_DIR) rev-parse --short HEAD)
+
 # Options
 OPENFPGA_WITH_VERSION ?= OFF
+
 
 # https://askubuntu.com/questions/279168/detect-if-its-ubuntu-linux-os-in-makefile
 # http://linuxmafia.com/faq/Admin/release-files.html
@@ -58,7 +65,7 @@ SUPPORTED_BUILD_PLATFORMS += WIN32_MSYS2_MINGW64
 SUPPORTED_BUILD_PLATFORMS += WIN32_MSYS2_UCRT64
 # SUPPORTED_BUILD_PLATFORMS += WIN32_MSVC
 SUPPORTED_BUILD_PLATFORMS += UBUNTU_2004
-# SUPPORTED_BUILD_PLATFORMS += UBUNTU_2204
+SUPPORTED_BUILD_PLATFORMS += UBUNTU_2204
 
 ifeq ($(OS),Windows_NT)
 ifneq ($(filter $(MSYSTEM),MINGW64),)
@@ -89,6 +96,10 @@ endif
 ifeq ($(BUILD_PLATFORM),$(filter $(BUILD_PLATFORM),WIN32_MSYS2_MINGW64 WIN32_MSYS2_UCRT64))
 export SOURCE_DIR_W := $(shell cygpath -w "$(SOURCE_DIR)" | sed 's;\\;/;g')
 export MSYS2_ARG_CONV_EXCL := "../EXTERNAL/capnproto/c++/src/capnp/capnp.exe;$(SOURCE_DIR_W)/build/openfpga/vtr-verilog-to-routing/libs/EXTERNAL/capnproto/c++/src/capnp/capnpc-c++.exe:."
+export MSYSTEM_LC := $(shell echo $(MSYSTEM) | tr '[:upper:]' '[:lower:]')
+export SEVENZIP_DIR_PATH := $(MAKEFILE_DIR_PATH)/7zip
+export SEVENZIP_FILE_PATH := $(SEVENZIP_DIR_PATH)/7z.exe
+export SEVENZIP_SFX_FILE_PATH_W=$(shell cygpath -w "$(SEVENZIP_DIR_PATH)/7z.sfx" | sed 's/\\/\\\\/g')
 endif
 
 
@@ -98,13 +109,13 @@ endif
 .PHONY: prepare
 prepare:
 ifeq ($(BUILD_PLATFORM),$(filter $(BUILD_PLATFORM),WIN32_MSYS2_MINGW64 WIN32_MSYS2_UCRT64))
-	find $(SOURCE_DIR)/vtr-verilog-to-routing/libs/libvtrutil/src/vtr_util.cpp -type f -exec sed -i 's-getdelim(-0;//-g' {} \;
-	find $(SOURCE_DIR)/vtr-verilog-to-routing/libs/EXTERNAL/capnproto/c++/src/kj/test-helpers.c++ -type f -exec sed -i 's-needle.size()};-needle.end()};-g' {} \;
-	find $(SOURCE_DIR)/vtr-verilog-to-routing/libs/EXTERNAL/capnproto/c++/ekam-provider/canonical/kj/test-helpers.c++ -type f -exec sed -i 's-needle.size()};-needle.end()};-g' {} \;
-	find $(SOURCE_DIR)/vtr-verilog-to-routing/libs/EXTERNAL/capnproto/c++/ekam-provider/c++header/kj/test-helpers.c++ -type f -exec sed -i 's-needle.size()};-needle.end()};-g' {} \;
-	find $(SOURCE_DIR)/libs/libnamemanager/src/base/io_name_map.h -type f -exec sed -i '7 i #include <array>' {} \;
-	find $(SOURCE_DIR)/openfpga/src/fpga_bitstream/fabric_bitstream.h -type f -exec sed -i '33 i #include <cstdint>' {} \;
-else ifeq ($(BUILD_PLATFORM),UBUNTU_2004)
+	@find $(SOURCE_DIR)/vtr-verilog-to-routing/libs/libvtrutil/src/vtr_util.cpp -type f -exec sed -i 's-getdelim(-0;//-g' {} \;
+	@find $(SOURCE_DIR)/vtr-verilog-to-routing/libs/EXTERNAL/capnproto/c++/src/kj/test-helpers.c++ -type f -exec sed -i 's-needle.size()};-needle.end()};-g' {} \;
+	@find $(SOURCE_DIR)/vtr-verilog-to-routing/libs/EXTERNAL/capnproto/c++/ekam-provider/canonical/kj/test-helpers.c++ -type f -exec sed -i 's-needle.size()};-needle.end()};-g' {} \;
+	@find $(SOURCE_DIR)/vtr-verilog-to-routing/libs/EXTERNAL/capnproto/c++/ekam-provider/c++header/kj/test-helpers.c++ -type f -exec sed -i 's-needle.size()};-needle.end()};-g' {} \;
+	@find $(SOURCE_DIR)/libs/libnamemanager/src/base/io_name_map.h -type f -exec sed -i '7 i #include <array>' {} \;
+	@find $(SOURCE_DIR)/openfpga/src/fpga_bitstream/fabric_bitstream.h -type f -exec sed -i '33 i #include <cstdint>' {} \;
+else ifeq ($(BUILD_PLATFORM),$(filter $(BUILD_PLATFORM),UBUNTU_2004 UBUNTU_2204))
 endif
 
 
@@ -124,7 +135,7 @@ ifeq ($(BUILD_PLATFORM),$(filter $(BUILD_PLATFORM),WIN32_MSYS2_MINGW64 WIN32_MSY
 	-DHAVE_STRUCT_TIMESPEC=1 \
 	-DABC_USE_STDINT_H=1 \
 	-S $(SOURCE_DIR) -B $(BUILD_DIR)
-else ifeq ($(BUILD_PLATFORM),UBUNTU_2004)
+else ifeq ($(BUILD_PLATFORM),$(filter $(BUILD_PLATFORM),UBUNTU_2004 UBUNTU_2204))
 	@cmake \
 	-DCMAKE_INSTALL_PREFIX=$(PREFIX) \
 	-DOPENFPGA_WITH_YOSYS=OFF \
@@ -143,13 +154,6 @@ install: run-cmake
 	@START_DATE=$$(date +$(DATE_FORMAT)) && echo "START_DATE=$${START_DATE}"; \
 	START_TIME=$$(date +$(TIME_FORMAT)) && echo "START_TIME=$${START_TIME}"
 
-# ifeq ($(BUILD_PLATFORM),$(filter $(BUILD_PLATFORM),WIN32_MSYS2_MINGW64 WIN32_MSYS2_UCRT64))
-# 	@export SOURCE_DIR_W=$(shell cygpath -w "$(SOURCE_DIR)" | sed 's;\\;/;g') && \
-# 	export MSYS2_ARG_CONV_EXCL="../EXTERNAL/capnproto/c++/src/capnp/capnp.exe;$${SOURCE_DIR_W}/build/openfpga/vtr-verilog-to-routing/libs/EXTERNAL/capnproto/c++/src/capnp/capnpc-c++.exe:." && \
-# 	$(MAKE) -C $(BUILD_DIR) install
-# else ifeq ($(BUILD_PLATFORM),UBUNTU_2004)
-# 	@$(MAKE) -C $(BUILD_DIR) install
-# endif
 	$(MAKE) -C $(BUILD_DIR) install
 	
 	@END_DATE=$$(date +$(DATE_FORMAT)) && echo "END_DATE=$${END_DATE}"; \
@@ -157,7 +161,35 @@ install: run-cmake
 
 
 .PHONY: package
-package:
+package: setup7zip
+ifeq ($(BUILD_PLATFORM),$(filter $(BUILD_PLATFORM),WIN32_MSYS2_MINGW64 WIN32_MSYS2_UCRT64))
+	printf "\n\n >>>create package dir, copy binaries <<<\n"
+	mkdir -p $(PACKAGE_DIR)/bin
+	cp -fv $(INSTALL_DIR)/bin/vpr.exe $(PACKAGE_DIR)/bin/
+	cp -fv $(INSTALL_DIR)/bin/openfpga.exe $(PACKAGE_DIR)/bin/
+	#
+	printf "\n\n >>> $(MSYSTEM_LC) dependency libs: vpr.exe <<<\n"
+	printf "\nldd output:"
+	ldd $(PACKAGE_DIR)/bin/vpr.exe
+	printf "\ncopy libs:"
+	for f in `ldd $(PACKAGE_DIR)/bin/vpr.exe | cut -d' ' -f 3 | grep "$(MSYSTEM_LC)" | uniq`; do cp -fv $${f} $(PACKAGE_DIR)/bin; done
+	printf "\n\n >>> $(MSYSTEM_LC) dependency libs: openfpga.exe <<<\n"
+	printf "\nldd output:"
+	ldd $(PACKAGE_DIR)/bin/openfpga.exe
+	printf "\ncopy libs:"
+	for f in `ldd $(PACKAGE_DIR)/bin/openfpga.exe | cut -d' ' -f 3 | grep "$(MSYSTEM_LC)" | uniq`; do cp -fv $${f} $(PACKAGE_DIR)/bin; done
+	#
+	printf "\n\n >>> create packages <<<\n"
+	cd $(PACKAGE_DIR) && \
+		$(SEVENZIP_FILE_PATH) a -mmt -mx3 -sfx$(SEVENZIP_SFX_FILE_PATH_W) openfpga-$(COMMIT_SHA1)-$(MSYSTEM_LC).sfx.exe * > /dev/null && \
+		mv $(PACKAGE_DIR)/openfpga-$(COMMIT_SHA1)-$(MSYSTEM_LC).sfx.exe ../ && \
+		$(SEVENZIP_FILE_PATH) a -tzip openfpga-$(COMMIT_SHA1)-$(MSYSTEM_LC).7z * > /dev/null && \
+		mv $(PACKAGE_DIR)/openfpga-$(COMMIT_SHA1)-$(MSYSTEM_LC).7z ../ && \
+		cd - &> /dev/null
+	ls openfpga-$(COMMIT_SHA1)-$(MSYSTEM_LC).sfx.exe
+	ls openfpga-$(COMMIT_SHA1)-$(MSYSTEM_LC).7z
+else ifeq ($(BUILD_PLATFORM),$(filter $(BUILD_PLATFORM),UBUNTU_2004 UBUNTU_2204))
+endif
 
 
 .PHONY: clean
@@ -168,6 +200,19 @@ endif
 ifneq ("$(wildcard $(BUILD_DIR))","")
 	@$(MAKE) -C ${BUILD_DIR} clean
 	@rm -rf $(BUILD_DIR)
+endif
+
+
+.PHONY: setup7zip
+setup7zip:
+ifeq ($(BUILD_PLATFORM),$(filter $(BUILD_PLATFORM),WIN32_MSYS2_MINGW64 WIN32_MSYS2_UCRT64))
+	printf "\n\n >>>7zip setup <<<\n"
+	mkdir -p $(SEVENZIP_DIR_PATH)
+	wget --quiet https://www.7-zip.org/a/7zr.exe --directory-prefix=$(SEVENZIP_DIR_PATH)
+	wget --quiet https://www.7-zip.org/a/7z2301-x64.exe --directory-prefix=$(SEVENZIP_DIR_PATH)
+	cd $(SEVENZIP_DIR_PATH) && \
+		$(SEVENZIP_DIR_PATH)/7zr.exe x $(SEVENZIP_DIR_PATH)/7z2301-x64.exe -y > /dev/null
+else ifeq ($(BUILD_PLATFORM),$(filter $(BUILD_PLATFORM),UBUNTU_2004 UBUNTU_2204))
 endif
 
 

@@ -64,6 +64,10 @@ jobs:
           mingw-w64-${{ matrix.env }}-swig
           mingw-w64-${{ matrix.env }}-python
 
+    - name: Install Dependencies
+      run: |
+        python3 -m pip install -r openfpga/requirements.txt
+
     - name: Show Shell Configuration
       run: |
         which git && git --version || true
@@ -104,7 +108,7 @@ jobs:
         #
         export COMMIT_SHA1=$(git -C ${SOURCE_DIR} rev-parse --short HEAD)
         echo "COMMIT_SHA1=${COMMIT_SHA1}" >> $GITHUB_ENV
-        printf "COMMIT_SHA1=${COMMIT_SHA1}"
+        printf "COMMIT_SHA1=${COMMIT_SHA1}\n"
         #
         export BUILD_DIR=${SOURCE_DIR}/build
         echo "BUILD_DIR=${BUILD_DIR}" >> $GITHUB_ENV
@@ -114,49 +118,9 @@ jobs:
         #
         make install -j$(nproc)
 
-    - name: Install 7zip
-      run: |
-        printf "\n\n >>>7zip setup <<<\n"
-        export SEVENZIP_DIR_PATH=${SOURCE_DIR}/7zip
-        mkdir -p ${SEVENZIP_DIR_PATH}
-        export SEVENZIP_FILE_PATH=${SEVENZIP_DIR_PATH}/7z.exe
-        echo "SEVENZIP_FILE_PATH=${SEVENZIP_FILE_PATH}" >> $GITHUB_ENV
-        export SEVENZIP_SFX_FILE_PATH_W=$(cygpath -w "${SEVENZIP_DIR_PATH}/7z.sfx" | sed 's/\\/\\\\/g')
-        echo "SEVENZIP_SFX_FILE_PATH_W=${SEVENZIP_SFX_FILE_PATH_W}" >> $GITHUB_ENV
-        wget --quiet https://www.7-zip.org/a/7zr.exe --directory-prefix=${SEVENZIP_DIR_PATH}
-        wget --quiet https://www.7-zip.org/a/7z2201-x64.exe --directory-prefix=${SEVENZIP_DIR_PATH}
-        cd ${SEVENZIP_DIR_PATH}
-        ${SEVENZIP_DIR_PATH}/7zr.exe x ${SEVENZIP_DIR_PATH}/7z2201-x64.exe -y > /dev/null
-        cd - &> /dev/null
-
     - name: Create Package
       run: |
-        printf "\n\n >>>create package dir, copy binaries <<<\n"
-        export PACKAGE_DIR=${PWD}/package
-        mkdir -p ${PACKAGE_DIR}/bin
-        cp -fv ${INSTALL_DIR}/bin/vpr.exe ${PACKAGE_DIR}/bin/
-        cp -fv ${INSTALL_DIR}/bin/openfpga.exe ${PACKAGE_DIR}/bin/
-        #
-        printf "\n\n >>> ${{ matrix.msystem }} dependency libs: vpr.exe <<<\n"
-        printf "\nldd output:"
-        ldd ${PACKAGE_DIR}/bin/vpr.exe
-        printf "\ncopy libs:"
-        for f in `ldd ${PACKAGE_DIR}/bin/vpr.exe | cut -d' ' -f 3 | grep "${{ matrix.msystem }}" | uniq`; do cp -fv ${f} ${PACKAGE_DIR}/bin; done
-        printf "\n\n >>> ${{ matrix.msystem }} dependency libs: openfpga.exe <<<\n"
-        printf "\nldd output:"
-        ldd ${PACKAGE_DIR}/bin/openfpga.exe
-        printf "\ncopy libs:"
-        for f in `ldd ${PACKAGE_DIR}/bin/openfpga.exe | cut -d' ' -f 3 | grep "${{ matrix.msystem }}" | uniq`; do cp -fv ${f} ${PACKAGE_DIR}/bin; done
-        #
-        printf "\n\n >>> create packages <<<\n"
-        cd ${PACKAGE_DIR}
-        # ${SEVENZIP_FILE_PATH} a -mmt -mx3 -sfx${SEVENZIP_SFX_FILE_PATH_W} openfpga.sfx.exe * > /dev/null
-        # mv ${PACKAGE_DIR}/openfpga.sfx.exe ../openfpga-${{ env.COMMIT_SHA1 }}-${{ matrix.msystem }}.sfx.exe
-        ${SEVENZIP_FILE_PATH} a -tzip openfpga.7z * > /dev/null
-        mv ${PACKAGE_DIR}/openfpga.7z ../openfpga-${{ env.COMMIT_SHA1 }}-${{ matrix.msystem }}.7z
-        cd - &> /dev/null
-        # ls openfpga-${{ env.COMMIT_SHA1 }}-${{ matrix.msystem }}.sfx.exe
-        ls openfpga-${{ env.COMMIT_SHA1 }}-${{ matrix.msystem }}.7z
+        make package
 
     - name: Upload OpenFPGA Package
       uses: actions/upload-artifact@v4.3.0
@@ -168,9 +132,18 @@ jobs:
         overwrite: true
 
 
-  build-ubuntu2004:
+  build-linux:
 
-    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-20.04
+            install_script: install_dependencies_build_ubuntu2004.sh
+          - runner: ubuntu-22.04
+            install_script: install_dependencies_build_ubuntu2204.sh
+
+    runs-on: ${{ matrix.runner }}
 
     defaults:
       run:
@@ -191,108 +164,8 @@ jobs:
 
     - name: Install Dependencies
       run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-            libicu-dev \
-            libglib2.0-dev \
-            libssl-dev \
-            libdbus-1-dev \
-            libgtk-3-dev \
-            libjpeg8-dev \
-            libtiff-dev \
-            libxcb-util-dev \
-            libreadline-dev \
-            libfontconfig1-dev \
-            libfreetype6-dev \
-            libx11-dev \
-            libx11-xcb-dev \
-            libxext-dev \
-            libxfixes-dev \
-            libxi-dev \
-            libxrender-dev \
-            libxcb1-dev \
-            libxcb-glx0-dev \
-            libxcb-keysyms1-dev \
-            libxcb-image0-dev \
-            libxcb-shm0-dev \
-            libxcb-icccm4-dev \
-            libxcb-sync-dev \
-            libxcb-xfixes0-dev \
-            libxcb-shape0-dev \
-            libxcb-randr0-dev \
-            libxcb-render-util0-dev \
-            libxcb-xinerama0-dev \
-            libxkbcommon-dev \
-            libxkbcommon-x11-dev \
-            libcanberra-gtk3-module \
-            packagekit-gtk3-module \
-            appmenu-gtk3-module \
-            wget \
-            git \
-            build-essential \
-            cmake \
-            flex \
-            bison \
-            pkg-config \
-            tcl \
-            tcl-dev \
-            tk \
-            tk-dev \
-            tcl8.6 \
-            tcl8.6-dev \
-            libtcl8.6 \
-            libboost-all-dev \
-            curl \
-            libedit-dev \
-            qtbase5-dev \
-            qtchooser \
-            qt5-qmake \
-            qtbase5-dev-tools \
-            g++-9 \
-            libkf5qqc2desktopstyle-dev \
-            tclsh \
-            google-perftools \
-            libgoogle-perftools-dev \
-            uuid-dev \
-            lcov \
-            valgrind \
-            xorg \
-            xvfb \
-            python3 \
-            python3-setuptools \
-            python3-lxml \
-            python3-pip \
-            swig \
-            libtbb-dev \
-            clang \
-            gawk \
-            tcl-dev \
-            libffi-dev \
-            graphviz \
-            xdot \
-            libboost-system-dev \
-            libboost-python-dev \
-            libboost-filesystem-dev \
-            zlib1g-dev \
-            xindy \
-            texlive-latex-base \
-            pandoc \
-            texlive-fonts-recommended \
-            texlive-fonts-extra \
-            texlive-fonts-extra-links \
-            fonts-freefont-* \
-            texlive-xetex \
-            latexmk \
-            pax-utils \
-            tmux \
-            tmux-plugin-manager \
-            tmux-themepack-jimeh \
-            screen \
-            software-properties-common \
-            fonts-croscore \
-            file \
-            libfuse2 \
-            libeigen3-dev
+        sudo bash ./.github/workflows/${{ matrix.install_script }}
+        sudo python3 -m pip install -r ./.github/workflows/requirements.txt
 
     - name: Show Shell Configuration
       run: |
@@ -343,4 +216,3 @@ jobs:
         echo "INSTALL_DIR=${INSTALL_DIR}" >> $GITHUB_ENV
         #
         make install -j$(nproc)
-
