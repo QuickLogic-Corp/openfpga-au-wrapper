@@ -63,6 +63,7 @@ BUILD_PLATFORM ?=
 SUPPORTED_BUILD_PLATFORMS :=
 SUPPORTED_BUILD_PLATFORMS += WIN32_MSYS2_MINGW64
 SUPPORTED_BUILD_PLATFORMS += WIN32_MSYS2_UCRT64
+# SUPPORTED_BUILD_PLATFORMS += WIN32_MSYS2_CLANG64
 # SUPPORTED_BUILD_PLATFORMS += WIN32_MSVC
 SUPPORTED_BUILD_PLATFORMS += UBUNTU_2004
 SUPPORTED_BUILD_PLATFORMS += UBUNTU_2204
@@ -72,6 +73,8 @@ ifneq ($(filter $(MSYSTEM),MINGW64),)
 	BUILD_PLATFORM := WIN32_MSYS2_MINGW64
 else ifneq ($(filter $(MSYSTEM),UCRT64),)
 	BUILD_PLATFORM := WIN32_MSYS2_UCRT64
+else ifneq ($(filter $(MSYSTEM),CLANG64),)
+	BUILD_PLATFORM := WIN32_MSYS2_CLANG64
 else
 	BUILD_PLATFORM := WIN32_MSVC
 endif
@@ -93,7 +96,7 @@ $(error unsupported build platform: $(BUILD_PLATFORM))
 endif
 
 
-ifeq ($(BUILD_PLATFORM),$(filter $(BUILD_PLATFORM),WIN32_MSYS2_MINGW64 WIN32_MSYS2_UCRT64))
+ifeq ($(BUILD_PLATFORM),$(filter $(BUILD_PLATFORM),WIN32_MSYS2_MINGW64 WIN32_MSYS2_UCRT64 WIN32_MSYS2_CLANG64))
 export SOURCE_DIR_W := $(shell cygpath -w "$(SOURCE_DIR)" | sed 's;\\;/;g')
 export MSYS2_ARG_CONV_EXCL := "../EXTERNAL/capnproto/c++/src/capnp/capnp.exe;$(SOURCE_DIR_W)/build/openfpga/vtr-verilog-to-routing/libs/EXTERNAL/capnproto/c++/src/capnp/capnpc-c++.exe:."
 export MSYSTEM_LC := $(shell echo $(MSYSTEM) | tr '[:upper:]' '[:lower:]')
@@ -108,7 +111,7 @@ endif
 
 .PHONY: prepare
 prepare:
-ifeq ($(BUILD_PLATFORM),$(filter $(BUILD_PLATFORM),WIN32_MSYS2_MINGW64 WIN32_MSYS2_UCRT64))
+ifeq ($(BUILD_PLATFORM),$(filter $(BUILD_PLATFORM),WIN32_MSYS2_MINGW64 WIN32_MSYS2_UCRT64 WIN32_MSYS2_CLANG64))
 	@find $(SOURCE_DIR)/vtr-verilog-to-routing/libs/libvtrutil/src/vtr_util.cpp -type f -exec sed -i 's-getdelim(-0;//-g' {} \;
 	@find $(SOURCE_DIR)/vtr-verilog-to-routing/libs/EXTERNAL/capnproto/c++/src/kj/test-helpers.c++ -type f -exec sed -i 's-needle.size()};-needle.end()};-g' {} \;
 	@find $(SOURCE_DIR)/vtr-verilog-to-routing/libs/EXTERNAL/capnproto/c++/ekam-provider/canonical/kj/test-helpers.c++ -type f -exec sed -i 's-needle.size()};-needle.end()};-g' {} \;
@@ -121,7 +124,7 @@ endif
 
 .PHONY: run-cmake
 run-cmake: prepare
-ifeq ($(BUILD_PLATFORM),$(filter $(BUILD_PLATFORM),WIN32_MSYS2_MINGW64 WIN32_MSYS2_UCRT64))
+ifeq ($(BUILD_PLATFORM),$(filter $(BUILD_PLATFORM),WIN32_MSYS2_MINGW64 WIN32_MSYS2_UCRT64 WIN32_MSYS2_CLANG64))
 	@cmake -G "MSYS Makefiles" \
 	-DCMAKE_INSTALL_PREFIX=$(PREFIX) \
 	-DOPENFPGA_IPO_BUILD=off \
@@ -162,7 +165,7 @@ install: run-cmake
 
 .PHONY: package
 package: setup7zip
-ifeq ($(BUILD_PLATFORM),$(filter $(BUILD_PLATFORM),WIN32_MSYS2_MINGW64 WIN32_MSYS2_UCRT64))
+ifeq ($(BUILD_PLATFORM),$(filter $(BUILD_PLATFORM),WIN32_MSYS2_MINGW64 WIN32_MSYS2_UCRT64 WIN32_MSYS2_CLANG64))
 	printf "\n\n >>>create package dir, copy binaries <<<\n"
 	mkdir -p $(PACKAGE_DIR)/bin
 	cp -fv $(INSTALL_DIR)/bin/vpr.exe $(PACKAGE_DIR)/bin/
@@ -205,7 +208,7 @@ endif
 
 .PHONY: setup7zip
 setup7zip:
-ifeq ($(BUILD_PLATFORM),$(filter $(BUILD_PLATFORM),WIN32_MSYS2_MINGW64 WIN32_MSYS2_UCRT64))
+ifeq ($(BUILD_PLATFORM),$(filter $(BUILD_PLATFORM),WIN32_MSYS2_MINGW64 WIN32_MSYS2_UCRT64 WIN32_MSYS2_CLANG64))
 	printf "\n\n >>>7zip setup <<<\n"
 	mkdir -p $(SEVENZIP_DIR_PATH)
 	wget --quiet https://www.7-zip.org/a/7zr.exe --directory-prefix=$(SEVENZIP_DIR_PATH)

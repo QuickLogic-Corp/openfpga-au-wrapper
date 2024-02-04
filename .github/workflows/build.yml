@@ -72,10 +72,12 @@ jobs:
     - name: Print Python Path
       run: |
         echo ${{ env.pythonLocation }}
-        echo ${{ env.Python_ROOT_DIR }}
-        echo ${{ env.Python3_ROOT_DIR }}
-        ls $(cygpath -u ${{ env.pythonLocation }})
-        ls $(cygpath -u ${{ env.Python3_ROOT_DIR }})
+        echo $(cygpath -u "${{ env.pythonLocation }}")
+        PYTHON_LOCATION_U=$(cygpath -u "${{ env.pythonLocation }}")
+        echo ${PYTHON_LOCATION_U}
+        
+        ls $(cygpath -u "${{ env.pythonLocation }}")
+        ls ${PYTHON_LOCATION_U}
 
     - name: Install Dependencies
       run: |
@@ -84,7 +86,7 @@ jobs:
 
     - name: Show Shell Configuration
       run: |
-        PATH=${{ env.pythonLocation }}:${PATH}
+        PATH=$(cygpath -u ${{ env.pythonLocation }}):${PATH}
         which git && git --version || true
         which cmake && cmake --version || true
         which make && make --version || true
