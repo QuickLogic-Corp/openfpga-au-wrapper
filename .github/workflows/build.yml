@@ -76,12 +76,12 @@ jobs:
 
     - name: Install Dependencies
       run: |
-        PATH=$(cygpath -u ${{ env.pythonLocation }}):${PATH}
-        $(cygpath -u ${{ env.pythonLocation }})/python3.exe -m pip install -r openfpga/requirements.txt
+        PATH=$(cygpath -u "${{ env.pythonLocation }}"):${PATH}
+        $(cygpath -u "${{ env.pythonLocation }}")/python3.exe -m pip install -r openfpga/requirements.txt
 
     - name: Show Shell Configuration
       run: |
-        PATH=$(cygpath -u ${{ env.pythonLocation }}):${PATH}
+        PATH=$(cygpath -u "${{ env.pythonLocation }}"):${PATH}
         which git && git --version || true
         which cmake && cmake --version || true
         which make && make --version || true
