@@ -191,8 +191,8 @@ jobs:
 
     - name: Install Dependencies
       run: |
-        apt-get update
-        apt-get install -y \
+        sudo apt-get update
+        sudo apt-get install -y \
             libicu-dev \
             libglib2.0-dev \
             libssl-dev \
