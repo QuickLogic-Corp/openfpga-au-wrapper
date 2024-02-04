@@ -63,6 +63,7 @@ jobs:
           mingw-w64-${{ matrix.env }}-zlib
           mingw-w64-${{ matrix.env }}-swig
           mingw-w64-${{ matrix.env }}-python
+          mingw-w64-${{ matrix.env }}-python-pip
 
     - name: Install Dependencies
       run: |
