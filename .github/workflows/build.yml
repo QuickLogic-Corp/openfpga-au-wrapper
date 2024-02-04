@@ -69,12 +69,22 @@ jobs:
         python-version: 3.8
         architecture: x64
 
+    - name: Print Python Path
+      run: |
+        echo ${{ env.pythonLocation }}
+        echo ${{ env.Python_ROOT_DIR }}
+        echo ${{ env.Python3_ROOT_DIR }}
+        ls ${{ env.pythonLocation }}
+        ls ${{ env.Python3_ROOT_DIR }}
+
     - name: Install Dependencies
       run: |
+        PATH=${{ env.pythonLocation }}:${PATH}
         python3 -m pip install -r openfpga/requirements.txt
 
     - name: Show Shell Configuration
       run: |
+        PATH=${{ env.pythonLocation }}:${PATH}
         which git && git --version || true
         which cmake && cmake --version || true
         which make && make --version || true
