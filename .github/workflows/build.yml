@@ -6,6 +6,8 @@ on:
 jobs:
 
   build-msys2:
+    
+    if: ${{ false }}
 
     strategy:
       fail-fast: false
@@ -146,6 +148,8 @@ jobs:
 
   build-linux:
 
+    if: ${{ false }}
+
     strategy:
       fail-fast: false
       matrix:
@@ -254,11 +258,11 @@ jobs:
       with:
         access_token: ${{ github.token }}
 
-    # - name: Checkout Repo
-    #   uses: actions/checkout@v4.1.1
-    #   with:
-    #     submodules: recursive
-    #     fetch-depth: 0
+    - name: Checkout Repo
+      uses: actions/checkout@v4.1.1
+      with:
+        submodules: false
+        fetch-depth: 0
 
     # - name: Install Dependencies
     #   run: |
