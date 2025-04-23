@@ -228,3 +228,78 @@ jobs:
         echo "INSTALL_DIR=${INSTALL_DIR}" >> $GITHUB_ENV
         #
         make install -j$(nproc)
+
+
+  build-macos:
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-13
+            install_script: install_dependencies_build_macos.sh
+          - runner: macos-14
+            install_script: install_dependencies_build_macos.sh
+
+    runs-on: ${{ matrix.runner }}
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+
+    - name: Cancel previous
+      uses: styfle/cancel-workflow-action@0.12.1
+      with:
+        access_token: ${{ github.token }}
+
+    # - name: Checkout Repo
+    #   uses: actions/checkout@v4.1.1
+    #   with:
+    #     submodules: recursive
+    #     fetch-depth: 0
+
+    # - name: Install Dependencies
+    #   run: |
+    #     sudo bash ./.github/workflows/${{ matrix.install_script }}
+    #     sudo python3 -m pip install -r ./.github/workflows/requirements.txt
+
+    - name: Show Shell Configuration
+      run: |
+        which git && git --version || true
+        which cmake && cmake --version || true
+        which make && make --version || true
+        which python && python --version || true
+        which ninja && ninja --version || true
+        which tclsh && echo 'puts [info patchlevel];exit 0' | tclsh || true
+
+    - name: Print Compiler Info
+      run: |
+        printf "\n"
+        printf "$(which gcc)\n"
+        printf "$(gcc -v)\n"
+        printf "\n"
+        printf "$(which g++)\n"
+        printf "$(g++ -v)\n"
+        printf "\n"
+        printf "\n"
+        printf "$(which clang)\n"
+        printf "$(clang -v)\n"
+        printf "$(which ld)\n"
+        printf "$(ld -v)\n"
+
+    - name: Dump GitHub Context
+      env:
+        GITHUB_CONTEXT: ${{ toJson(github) }}
+      run: echo "$GITHUB_CONTEXT"
+
+    # - name: Print Repo HEAD
+    #   run: |
+    #     echo && echo "git last log" && git log -1
+
+    # https://sourceforge.net/p/mingw/mailman/message/5690922/
+    # https://github.com/capnproto/capnproto/issues/1458
+    - name: Build
+      run: |
+        make _testing

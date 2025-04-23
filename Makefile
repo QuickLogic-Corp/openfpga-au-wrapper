@@ -56,6 +56,21 @@ COMMIT_SHA1 := $(shell git -C $(SOURCE_DIR) rev-parse --short HEAD)
 # Options
 OPENFPGA_WITH_VERSION ?= OFF
 
+uname_S := $(shell sh -c 'uname -s 2>/dev/null || echo not')
+uname_M := $(shell sh -c 'uname -m 2>/dev/null || echo not')
+uname_O := $(shell sh -c 'uname -o 2>/dev/null || echo not')
+uname_R := $(shell sh -c 'uname -r 2>/dev/null || echo not')
+uname_P := $(shell sh -c 'uname -p 2>/dev/null || echo not')
+uname_V := $(shell sh -c 'uname -v 2>/dev/null || echo not')
+
+$(info uname_S $(uname_S))
+$(info uname_M $(uname_M))
+$(info uname_O $(uname_O))
+$(info uname_R $(uname_R))
+$(info uname_P $(uname_P))
+$(info uname_V $(uname_V))
+$(info OS $(OS))
+
 
 # https://askubuntu.com/questions/279168/detect-if-its-ubuntu-linux-os-in-makefile
 # http://linuxmafia.com/faq/Admin/release-files.html
@@ -89,11 +104,11 @@ endif
 endif
 endif # ifeq ($(OS),Windows_NT)
 
-ifneq ($(filter $(BUILD_PLATFORM),$(SUPPORTED_BUILD_PLATFORMS)),)
-$(info using build platform: $(BUILD_PLATFORM))
-else
-$(error unsupported build platform: $(BUILD_PLATFORM))
-endif
+# ifneq ($(filter $(BUILD_PLATFORM),$(SUPPORTED_BUILD_PLATFORMS)),)
+# $(info using build platform: $(BUILD_PLATFORM))
+# else
+# $(error unsupported build platform: $(BUILD_PLATFORM))
+# endif
 
 
 ifeq ($(BUILD_PLATFORM),$(filter $(BUILD_PLATFORM),WIN32_MSYS2_MINGW64 WIN32_MSYS2_UCRT64 WIN32_MSYS2_CLANG64))
@@ -225,3 +240,5 @@ _testing:
 	$(info _testing)
 	$(info OS: $(OS))
 	$(info BUILD_PLATFORM: $(BUILD_PLATFORM))
+	sw_vers
+	uname -a
