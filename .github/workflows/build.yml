@@ -330,5 +330,8 @@ jobs:
         export INSTALL_DIR=${PWD}/install
         echo "INSTALL_DIR=${INSTALL_DIR}" >> $GITHUB_ENV
         #
+        export PATH=/usr/local/opt/bison/bin:$PATH
+        export LDFLAGS="-L/usr/local/opt/bison/lib"
+        bison -V
         make install -j$(nproc)
 
