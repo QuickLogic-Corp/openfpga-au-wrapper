@@ -242,8 +242,8 @@ jobs:
         include:
           - runner: macos-13
             install_script: install_dependencies_build_macos.sh
-          - runner: macos-14
-            install_script: install_dependencies_build_macos.sh
+          # - runner: macos-14
+          #   install_script: install_dependencies_build_macos.sh
 
     runs-on: ${{ matrix.runner }}
 
@@ -266,7 +266,7 @@ jobs:
 
     - name: Install Dependencies
       run: |
-        sudo bash ./.github/workflows/${{ matrix.install_script }}
+        bash ./.github/workflows/${{ matrix.install_script }}
         # sudo python3 -m pip install -r ./.github/workflows/requirements.txt
 
     - name: Show Shell Configuration
