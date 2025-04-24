@@ -101,6 +101,7 @@ ifneq ("$(wildcard /etc/lsb-release)","")
 	VERSION := $(subst .,,$(shell lsb_release -sr))
 	BUILD_PLATFORM := $(DISTRO)_$(VERSION)
 endif
+else ifeq ($(OS),Darwin)
 endif
 endif # ifeq ($(OS),Windows_NT)
 
@@ -240,5 +241,7 @@ _testing:
 	$(info _testing)
 	$(info OS: $(OS))
 	$(info BUILD_PLATFORM: $(BUILD_PLATFORM))
-	sw_vers
+	sw_vers -R
+	sw_vers -n
+	sw_vers -v
 	uname -a
