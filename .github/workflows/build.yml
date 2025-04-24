@@ -261,13 +261,13 @@ jobs:
     - name: Checkout Repo
       uses: actions/checkout@v4.1.1
       with:
-        submodules: false
+        submodules: recursive
         fetch-depth: 0
 
-    # - name: Install Dependencies
-    #   run: |
-    #     sudo bash ./.github/workflows/${{ matrix.install_script }}
-    #     sudo python3 -m pip install -r ./.github/workflows/requirements.txt
+    - name: Install Dependencies
+      run: |
+        # sudo bash ./.github/workflows/${{ matrix.install_script }}
+        sudo python3 -m pip install -r ./.github/workflows/requirements.txt
 
     - name: Show Shell Configuration
       run: |
@@ -298,12 +298,31 @@ jobs:
         GITHUB_CONTEXT: ${{ toJson(github) }}
       run: echo "$GITHUB_CONTEXT"
 
-    # - name: Print Repo HEAD
-    #   run: |
-    #     echo && echo "git last log" && git log -1
+    - name: Print Repo HEAD
+      run: |
+        echo && echo "git last log" && git log -1
+
+    - name: test
+      run: |
+        make _testing
 
     # https://sourceforge.net/p/mingw/mailman/message/5690922/
     # https://github.com/capnproto/capnproto/issues/1458
     - name: Build
       run: |
-        make _testing
+        #
+        export SOURCE_DIR=${PWD}/openfpga
+        echo "SOURCE_DIR=${SOURCE_DIR}" >> $GITHUB_ENV
+        #
+        export COMMIT_SHA1=$(git -C ${SOURCE_DIR} rev-parse --short HEAD)
+        echo "COMMIT_SHA1=${COMMIT_SHA1}" >> $GITHUB_ENV
+        printf "COMMIT_SHA1=${COMMIT_SHA1}"
+        #
+        export BUILD_DIR=${SOURCE_DIR}/build
+        echo "BUILD_DIR=${BUILD_DIR}" >> $GITHUB_ENV
+        #
+        export INSTALL_DIR=${PWD}/install
+        echo "INSTALL_DIR=${INSTALL_DIR}" >> $GITHUB_ENV
+        #
+        make install -j$(nproc)
+

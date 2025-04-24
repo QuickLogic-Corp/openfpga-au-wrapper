@@ -37,6 +37,12 @@ CURRENT_TIME := $(shell date +$(TIME_FORMAT))
 CURRENT_TZ := $(shell date +$(TZ_FORMAT))
 $(info time: $(CURRENT_DATE) $(CURRENT_TIME) $(CURRENT_TZ))
 
+# split version (or similar) separated by dots into words:
+word-dot = $(word $2,$(subst ., ,$1))
+# usage: 
+# var1=$(call word-dot,$(MAKEFILE_VARIABLE_WITH_DOTS),1)
+# var2=$(call word-dot,$(MAKEFILE_VARIABLE_WITH_DOTS),2)
+
 # Use bash as the default shell
 SHELL := /bin/bash
 
@@ -56,6 +62,7 @@ COMMIT_SHA1 := $(shell git -C $(SOURCE_DIR) rev-parse --short HEAD)
 # Options
 OPENFPGA_WITH_VERSION ?= OFF
 
+uname_A := $(shell sh -c 'uname -a 2>/dev/null || echo not')
 uname_S := $(shell sh -c 'uname -s 2>/dev/null || echo not')
 uname_M := $(shell sh -c 'uname -m 2>/dev/null || echo not')
 uname_O := $(shell sh -c 'uname -o 2>/dev/null || echo not')
@@ -63,13 +70,15 @@ uname_R := $(shell sh -c 'uname -r 2>/dev/null || echo not')
 uname_P := $(shell sh -c 'uname -p 2>/dev/null || echo not')
 uname_V := $(shell sh -c 'uname -v 2>/dev/null || echo not')
 
+$(info OS $(OS))
+$(info uname_S $(uname_A))
 $(info uname_S $(uname_S))
 $(info uname_M $(uname_M))
 $(info uname_O $(uname_O))
 $(info uname_R $(uname_R))
 $(info uname_P $(uname_P))
 $(info uname_V $(uname_V))
-$(info OS $(OS))
+
 
 
 # https://askubuntu.com/questions/279168/detect-if-its-ubuntu-linux-os-in-makefile
@@ -102,6 +111,12 @@ ifneq ("$(wildcard /etc/lsb-release)","")
 	BUILD_PLATFORM := $(DISTRO)_$(VERSION)
 endif
 else ifeq ($(OS),Darwin)
+	VERSION := $(subst .,,$(shell sw_vers -v))
+	MAJOR_VERSION := $(call word-dot,$(VERSION),1)
+	MINOR_VERSION := $(call word-dot,$(VERSION),2)
+	PATCH_VERSION := $(call word-dot,$(VERSION),3)
+	ARCH := $(uname_M)
+	BUILD_PLATFORM := DARWIN_$(MAJOR_VERSION)_$(ARCH)
 endif
 endif # ifeq ($(OS),Windows_NT)
 
@@ -153,6 +168,16 @@ ifeq ($(BUILD_PLATFORM),$(filter $(BUILD_PLATFORM),WIN32_MSYS2_MINGW64 WIN32_MSY
 	-DVTR_IPO_BUILD=off \
 	-DHAVE_STRUCT_TIMESPEC=1 \
 	-DABC_USE_STDINT_H=1 \
+	-S $(SOURCE_DIR) -B $(BUILD_DIR)
+else ifeq ($(BUILD_PLATFORM),$(filter $(BUILD_PLATFORM),UBUNTU_2004 UBUNTU_2204))
+	@cmake \
+	-DCMAKE_INSTALL_PREFIX=$(PREFIX) \
+	-DOPENFPGA_WITH_YOSYS=OFF \
+	-DOPENFPGA_WITH_YOSYS_PLUGIN=OFF \
+	-DOPENFPGA_WITH_TEST=OFF \
+	-DOPENFPGA_WITH_VERSION=$(OPENFPGA_WITH_VERSION) \
+	-DOPENFPGA_WITH_SWIG=OFF \
+	-DWITH_ABC=OFF \
 	-S $(SOURCE_DIR) -B $(BUILD_DIR)
 else ifeq ($(BUILD_PLATFORM),$(filter $(BUILD_PLATFORM),UBUNTU_2004 UBUNTU_2204))
 	@cmake \
@@ -241,7 +266,3 @@ _testing:
 	$(info _testing)
 	$(info OS: $(OS))
 	$(info BUILD_PLATFORM: $(BUILD_PLATFORM))
-	sw_vers -R
-	sw_vers -n
-	sw_vers -v
-	uname -a
