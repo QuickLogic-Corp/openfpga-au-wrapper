@@ -111,7 +111,8 @@ ifneq ("$(wildcard /etc/lsb-release)","")
 	BUILD_PLATFORM := $(DISTRO)_$(VERSION)
 endif
 else ifeq ($(OS),Darwin)
-	VERSION := $(subst .,,$(shell sw_vers -v))
+	VERSION := $(shell sw_vers -v)
+# VERSION := $(subst .,,$(shell sw_vers -v))
 	MAJOR_VERSION := $(call word-dot,$(VERSION),1)
 	MINOR_VERSION := $(call word-dot,$(VERSION),2)
 	PATCH_VERSION := $(call word-dot,$(VERSION),3)
@@ -181,6 +182,8 @@ else ifeq ($(BUILD_PLATFORM),$(filter $(BUILD_PLATFORM),UBUNTU_2004 UBUNTU_2204)
 	-S $(SOURCE_DIR) -B $(BUILD_DIR)
 else
 	@cmake \
+	-DCMAKE_C_COMPILER=/usr/bin/gcc-14 \
+	-DCMAKE_CXX_COMPILER=/usr/bin/g++-14 \
 	-DCMAKE_INSTALL_PREFIX=$(PREFIX) \
 	-DOPENFPGA_WITH_YOSYS=OFF \
 	-DOPENFPGA_WITH_YOSYS_PLUGIN=OFF \
